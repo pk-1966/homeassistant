@@ -1,0 +1,318 @@
+################################################################################
+# BMW 320d Package — with persistent GPS & heading across restarts
+# based upon https://github.com/kvanbiesen/bmw-cardata-ha (was previously https://github.com/JjyKsi/bmw-cardata-ha)
+################################################################################
+
+########################################
+# Helpers (persistent storage)
+########################################
+
+input_datetime:
+  bmw_last_update:
+    name: BMW Last Update
+    has_date: true
+    has_time: true
+
+input_number:
+  bmw_prev_lat:
+    name: BMW Previous Latitude
+    min: -90
+    max: 90
+    step: 0.000001
+
+  bmw_prev_lon:
+    name: BMW Previous Longitude
+    min: -180
+    max: 180
+    step: 0.000001
+
+  bmw_prev_acc:
+    name: BMW Previous GPS Accuracy
+    min: 0
+    max: 100
+    step: 1
+
+  bmw_prev_heading:
+    name: BMW Previous Heading
+    min: 0
+    max: 360
+    step: 0.1
+
+input_boolean:
+  bmw_debug_mqtt:
+    name: BMW Debug MQTT
+    initial: off
+
+
+########################################
+# Sensors
+########################################
+
+template:
+  # Combined location sensor
+  - trigger:
+      - platform: state
+        entity_id: device_tracker.location
+        attribute: latitude
+      - platform: state
+        entity_id: device_tracker.location
+        attribute: longitude
+    sensor:
+      - name: "BMW Combined Location"
+        unique_id: bmw_combined_location
+        state: >
+          {% set lat = state_attr('device_tracker.location', 'latitude') %}
+          {% set lon = state_attr('device_tracker.location', 'longitude') %}
+          {% if lat is number and lon is number %}
+            {{ lat }},{{ lon }}
+          {% else %}
+            unavailable
+          {% endif %}
+        attributes:
+          latitude: "{{ state_attr('device_tracker.location','latitude') }}"
+          longitude: "{{ state_attr('device_tracker.location','longitude') }}"
+          gps_accuracy: "{{ state_attr('device_tracker.location','gps_accuracy') | default(5) }}"
+
+  # Freshness + accuracy
+  - trigger:
+      - platform: time_pattern
+        minutes: "/1"
+      - platform: state
+        entity_id: input_datetime.bmw_last_update
+    sensor:
+      - name: "BMW Location Freshness"
+        state: >
+          {% set last = states('input_datetime.bmw_last_update') %}
+          {% if last in ['unknown','unavailable'] %}
+            Unknown
+          {% else %}
+            {% set diff = (as_timestamp(now()) - as_timestamp(last)) | int %}
+            {% if diff < 60 %}
+              {{ diff }} sec
+            {% elif diff < 3600 %}
+              {{ (diff / 60) | round(1) }} min
+            {% elif diff < 86400 %}
+              {{ (diff / 3600) | round(1) }} hr
+            {% else %}
+              {{ (diff / 86400) | round(1) }} days
+            {% endif %}
+          {% endif %}
+        icon: mdi:clock-alert
+
+      - name: "BMW GPS Accuracy"
+        unit_of_measurement: "m"
+        icon: mdi:crosshairs-gps
+        state: "{{ state_attr('sensor.bmw_combined_location','gps_accuracy') | default(5) }}"
+
+
+########################################
+# MQTT Weather Sensors
+########################################
+
+mqtt:
+  sensor:
+    - name: "BMW 320d Temperature"
+      state_topic: "vehicles/bmw_320d"
+      unit_of_measurement: "°C"
+      value_template: "{{ value_json.temperature }}"
+      unique_id: bmw_320d_temperature
+
+    - name: "BMW 320d Windspeed"
+      state_topic: "vehicles/bmw_320d"
+      unit_of_measurement: "mph"
+      value_template: "{{ (value_json.windspeed | float(0) * 0.621371) | round(1) }}"
+      unique_id: bmw_320d_windspeed
+
+    - name: "BMW 320d Wind Direction"
+      state_topic: "vehicles/bmw_320d"
+      unit_of_measurement: "°"
+      value_template: "{{ value_json.winddirection }}"
+      unique_id: bmw_320d_winddirection
+
+    - name: "BMW 320d Condition"
+      state_topic: "vehicles/bmw_320d"
+      value_template: "{{ value_json.condition }}"
+      unique_id: bmw_320d_condition
+
+    - name: "BMW 320d Location"
+      state_topic: "vehicles/bmw_320d"
+      value_template: "{{ value_json.display_name }}"
+      unique_id: bmw_320d_location
+
+
+########################################
+# Automations
+########################################
+
+automation:
+
+  ###########################################################################
+  # A. Publish Updated Location/Heading + store values persistently
+  ###########################################################################
+  - alias: BMW Update MQTT Location (Throttled with Heading)
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: sensor.bmw_combined_location
+    condition:
+      - condition: template
+        value_template: >
+          {{ state_attr('sensor.bmw_combined_location','latitude') is number }}
+      - condition: template
+        value_template: >
+          {% set last = states('input_datetime.bmw_last_update') %}
+          {% if last == 'unknown' %} true
+          {% else %} {{ (as_timestamp(now()) - as_timestamp(last)) > 5 }} {% endif %}
+    action:
+      - delay: "00:00:01.5"
+
+      - variables:
+          lat: "{{ state_attr('sensor.bmw_combined_location','latitude') | float }}"
+          lon: "{{ state_attr('sensor.bmw_combined_location','longitude') | float }}"
+          acc: "{{ state_attr('sensor.bmw_combined_location','gps_accuracy') | float(5) }}"
+          prev_lat: "{{ states('input_number.bmw_prev_lat') | float }}"
+          prev_lon: "{{ states('input_number.bmw_prev_lon') | float }}"
+
+      - variables:
+          dLon: "{{ lon - prev_lon }}"
+          dLat: "{{ lat - prev_lat }}"
+          heading: >-
+            {% if dLat == 0 and dLon == 0 %}
+              {{ states('input_number.bmw_prev_heading') }}
+            {% else %}
+              {% set b = atan2(dLon, dLat) * 180 / 3.141592653589793 %}
+              {% if b < 0 %} {{ (b + 360) | round(1) }} {% else %} {{ b | round(1) }} {% endif %}
+            {% endif %}
+
+      # 🟦 Persist values
+      - service: input_number.set_value
+        target: { entity_id: input_number.bmw_prev_lat }
+        data: { value: "{{ lat }}" }
+
+      - service: input_number.set_value
+        target: { entity_id: input_number.bmw_prev_lon }
+        data: { value: "{{ lon }}" }
+
+      - service: input_number.set_value
+        target: { entity_id: input_number.bmw_prev_acc }
+        data: { value: "{{ acc }}" }
+
+      - service: input_number.set_value
+        target: { entity_id: input_number.bmw_prev_heading }
+        data: { value: "{{ heading }}" }
+
+      - service: input_datetime.set_datetime
+        target: { entity_id: input_datetime.bmw_last_update }
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+
+      # 🟦 Publish MQTT (state + attributes)
+      - service: mqtt.publish
+        data:
+          topic: "homeassistant/device_tracker/bmw_320d/state"
+          payload: "home"
+
+      - service: mqtt.publish
+        data:
+          topic: "homeassistant/device_tracker/bmw_320d/attributes"
+          payload: >
+            {
+              "latitude": {{ lat }},
+              "longitude": {{ lon }},
+              "gps_accuracy": {{ acc }},
+              "heading": {{ heading }}
+            }
+
+      # 🟦 Optional debug
+      - condition: state
+        entity_id: input_boolean.bmw_debug_mqtt
+        state: "on"
+      - service: mqtt.publish
+        data:
+          topic: "homeassistant/debug/bmw"
+          payload: >
+            {{ now() }} BMW: lat={{ lat }}, lon={{ lon }}, acc={{ acc }}, heading={{ heading }}
+
+
+  ###########################################################################
+  # B. Restore Persistent GPS After Restart
+  ###########################################################################
+  - alias: BMW Restore Last Known Location on Startup
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - variables:
+          lat: "{{ states('input_number.bmw_prev_lat') }}"
+          lon: "{{ states('input_number.bmw_prev_lon') }}"
+          acc: "{{ states('input_number.bmw_prev_acc') }}"
+          head: "{{ states('input_number.bmw_prev_heading') }}"
+
+      - service: mqtt.publish
+        data:
+          topic: "homeassistant/device_tracker/bmw_320d/state"
+          payload: "home"
+          retain: false
+
+      - service: mqtt.publish
+        data:
+          topic: "homeassistant/device_tracker/bmw_320d/attributes"
+          payload: >
+            {
+              "latitude": {{ lat }},
+              "longitude": {{ lon }},
+              "gps_accuracy": {{ acc }},
+              "heading": {{ head }}
+            }
+          retain: false
+
+
+  ###########################################################################
+  # C. Publish MQTT Discovery (unchanged)
+  ###########################################################################
+  - alias: BMW Publish MQTT Discovery
+    trigger:
+      - platform: homeassistant
+        event: start
+      - platform: time_pattern
+        hours: "/4"
+    action:
+      - service: mqtt.publish
+        data:
+          topic: "homeassistant/device_tracker/bmw_320d/config"
+          payload: >
+            {
+              "name": "BMW 320d",
+              "unique_id": "bmw_320d",
+              "source_type": "gps",
+              "state_topic": "homeassistant/device_tracker/bmw_320d/state",
+              "json_attributes_topic": "homeassistant/device_tracker/bmw_320d/attributes",
+              "entity_picture": "https://home-assistant.pk1966.uk/local/bmw.png",
+              "icon": "mdi:car"
+            }
+          retain: true
+
+
+  ###########################################################################
+  # D. Raw Debug GPS
+  ###########################################################################
+  - alias: BMW Debug Raw GPS Updates
+    mode: queued
+    trigger:
+      - platform: state
+        entity_id: device_tracker.location
+        attribute: latitude
+      - platform: state
+        entity_id: device_tracker.location
+        attribute: longitude
+    condition:
+      - condition: state
+        entity_id: input_boolean.bmw_debug_mqtt
+        state: "on"
+    action:
+      - service: mqtt.publish
+        data:
+          topic: "homeassistant/debug/bmw/raw"
+          payload: >
+            RAW {{ now() }} lat={{ state_attr('device_tracker.location','latitude') }} lon={{ state_attr('device_tracker.location','longitude') }}
+
