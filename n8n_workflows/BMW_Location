@@ -1,0 +1,532 @@
+{
+  "name": "Update BMW Location and Weather",
+  "nodes": [
+    {
+      "parameters": {
+        "topics": "homeassistant/device_tracker/bmw_320d/attributes",
+        "options": {
+          "jsonParseBody": true
+        }
+      },
+      "type": "n8n-nodes-base.mqttTrigger",
+      "typeVersion": 1,
+      "position": [
+        -816,
+        -16
+      ],
+      "id": "01a8b2ea-0da8-480f-858d-05ae6eb2d2ba",
+      "name": "MQTT Trigger",
+      "executeOnce": true,
+      "credentials": {
+        "mqtt": {
+          "id": "Hmi6YgW2ZSk3WB8L",
+          "name": "MQTT account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://geocode.maps.co/reverse?lat={{ $json[\"latitude\"] }}&lon={{ $json[\"longitude\"] }}&api_key=690a6365e1461428550536nagef0fab",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        624,
+        -64
+      ],
+      "id": "937ac3b9-5ede-487d-9d77-e381b5d6065b",
+      "name": "Decode Geolocation"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast?latitude={{ $json[\"latitude\"] }}&longitude={{ $json[\"longitude\"] }}&current_weather=true",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        80
+      ],
+      "id": "2f7366c2-a163-4fec-bb94-2b780acd065a",
+      "name": "Get the weather"
+    },
+    {
+      "parameters": {
+        "jsCode": "const code = $json[\"current_weather\"][\"weathercode\"];\nconst descriptions = {\n  0: \"Clear sky\",\n  1: \"Mainly clear\",\n  2: \"Partly cloudy\",\n  3: \"Overcast\",\n  45: \"Fog\",\n  48: \"Depositing rime fog\",\n  51: \"Light drizzle\",\n  53: \"Moderate drizzle\",\n  55: \"Dense drizzle\",\n  56: \"Light freezing drizzle\",\n  57: \"Dense freezing drizzle\",\n  61: \"Slight rain\",\n  63: \"Moderate rain\",\n  65: \"Heavy rain\",\n  66: \"Light freezing rain\",\n  67: \"Heavy freezing rain\",\n  71: \"Slight snow fall\",\n  73: \"Moderate snow fall\",\n  75: \"Heavy snow fall\",\n  80: \"Slight rain showers\",\n  81: \"Moderate rain showers\",\n  82: \"Violent rain showers\",\n  85: \"Slight snow showers\",\n  86: \"Heavy snow showers\",\n  95: \"Thunderstorm\",\n  96: \"Thunderstorm with slight hail\",\n  99: \"Thunderstorm with heavy hail\"\n};\n\nreturn [\n  {\n    json: {\n      temperature: $json[\"current_weather\"][\"temperature\"],\n      windspeed: $json[\"current_weather\"][\"windspeed\"],\n      winddirection: $json[\"current_weather\"][\"winddirection\"],\n      condition: descriptions[code] || \"Unknown\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        80
+      ],
+      "id": "d09fe5a6-bfd3-48cb-9f94-2e6a560800c8",
+      "name": "Make Weather human readable"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -144,
+        0
+      ],
+      "id": "fd23f526-86a7-4fcd-aabf-b730f855a10d",
+      "name": "Expose MQTT Attributes"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        960,
+        0
+      ],
+      "id": "36a41030-197c-4eea-870a-bd2f7c12b8f0",
+      "name": "Combine Weather and Location"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ad745d48-7f32-4de0-8827-a5b89338aabf",
+              "name": "temperature",
+              "value": "={{ $json.temperature }}",
+              "type": "number"
+            },
+            {
+              "id": "cbcd3861-bddc-4d63-9955-b7c706e5f401",
+              "name": "windspeed",
+              "value": "={{ $json.windspeed }}",
+              "type": "number"
+            },
+            {
+              "id": "a8550a46-d28e-4689-ad1e-db9682b81309",
+              "name": "winddirection",
+              "value": "={{ $json.winddirection }}",
+              "type": "number"
+            },
+            {
+              "id": "331776d3-98da-4516-8f3d-d86a5a5ee9bb",
+              "name": "condition",
+              "value": "={{ $json.condition }}",
+              "type": "string"
+            },
+            {
+              "id": "50336574-03c6-48d9-91ff-53e342c6cb3d",
+              "name": "display_name",
+              "value": "={{ $json.display_name }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        0
+      ],
+      "id": "5b577ecb-0e25-49f5-b9af-65c7762cdd2b",
+      "name": "Expose just the basic fields"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "dataTableId": {
+          "__rl": true,
+          "value": "5fZKWt0fzoonYdQy",
+          "mode": "list",
+          "cachedResultName": "publish_tracker",
+          "cachedResultUrl": "/projects/vORdl4RiE4AkZa3c/datatables/5fZKWt0fzoonYdQy"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "topic",
+              "keyValue": "bmw320d/human_readable"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "last_publish": "={{ new Date().toISOString() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "topic",
+              "displayName": "topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "last_publish",
+              "displayName": "last_publish",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        0
+      ],
+      "id": "0132feb9-b66c-4cbb-b56e-4eee9a395e9c",
+      "name": "Store Last Published"
+    },
+    {
+      "parameters": {
+        "topic": "vehicles/bmw_320d",
+        "options": {
+          "retain": true
+        }
+      },
+      "type": "n8n-nodes-base.mqtt",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        0
+      ],
+      "id": "d89c7961-276d-4967-aebc-df31a96fa970",
+      "name": "Publish MQTT Human Readable",
+      "credentials": {
+        "mqtt": {
+          "id": "Hmi6YgW2ZSk3WB8L",
+          "name": "MQTT account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const { latitude, longitude } = item.json.message;\n\nreturn {\n  json: {\n    latitude,\n    longitude\n  }\n};\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        0
+      ],
+      "id": "27c4812f-5f0f-40ef-a1cf-9e7e301f6fe4",
+      "name": "Expose Latitude and Longitude"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "804602f4-e382-4dfd-a141-c6807f420d11",
+              "leftValue": "={{ $json.proceed }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        64,
+        0
+      ],
+      "id": "6d9883ae-d927-424e-84a3-e220f09e0cd2",
+      "name": "If"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        288,
+        272
+      ],
+      "id": "1c6ce83c-11b8-4d7c-86aa-b665df6ffc0a",
+      "name": "No Operation, do nothing"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        272
+      ],
+      "id": "41604670-32b0-4ba0-8552-e291da18d7b2",
+      "name": "No Operation, do nothing1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "5fZKWt0fzoonYdQy",
+          "mode": "list",
+          "cachedResultName": "publish_tracker",
+          "cachedResultUrl": "/projects/vORdl4RiE4AkZa3c/datatables/5fZKWt0fzoonYdQy"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "topic",
+              "keyValue": "bmw320d/human_readable"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        80
+      ],
+      "id": "5b47369f-832d-41f6-93bd-0ab521821d00",
+      "name": "Check Last Publish time"
+    },
+    {
+      "parameters": {
+        "jsCode": "const lastPublished = new Date(items[0].json.last_publish).getTime();\nconst now = Date.now();\nconst threeMinutes = 3 * 60 * 1000;\n\nif (now - lastPublished >= threeMinutes) {\n  return [ { json: { proceed: true } } ];\n} else {\n  return [ { json: { proceed: false } } ];\n}\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        80
+      ],
+      "id": "66be1a0b-7d74-46dd-800e-328b70b87831",
+      "name": "Determine whether to throttle"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "MQTT Trigger": {
+      "main": [
+        [
+          {
+            "node": "Expose MQTT Attributes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Last Publish time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decode Geolocation": {
+      "main": [
+        [
+          {
+            "node": "Combine Weather and Location",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get the weather": {
+      "main": [
+        [
+          {
+            "node": "Make Weather human readable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make Weather human readable": {
+      "main": [
+        [
+          {
+            "node": "Combine Weather and Location",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Expose MQTT Attributes": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Weather and Location": {
+      "main": [
+        [
+          {
+            "node": "Expose just the basic fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expose just the basic fields": {
+      "main": [
+        [
+          {
+            "node": "Publish MQTT Human Readable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish MQTT Human Readable": {
+      "main": [
+        [
+          {
+            "node": "Store Last Published",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expose Latitude and Longitude": {
+      "main": [
+        [
+          {
+            "node": "Decode Geolocation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get the weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Expose Latitude and Longitude",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Operation, do nothing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Last Published": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Operation, do nothing": {
+      "main": [
+        [
+          {
+            "node": "No Operation, do nothing1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Last Publish time": {
+      "main": [
+        [
+          {
+            "node": "Determine whether to throttle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Determine whether to throttle": {
+      "main": [
+        [
+          {
+            "node": "Expose MQTT Attributes",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b05716ed-99cd-4570-9a74-0a18d0cddf3e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "67f8a176bd8502fc36bd61d5d5b93fb5e8fc3aebe0d3ef508c4687220c559ac6"
+  },
+  "id": "9CKoMQ0tta1iFwo3",
+  "tags": []
+}
