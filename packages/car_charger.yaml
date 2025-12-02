@@ -1,0 +1,70 @@
+
+# Car Charger Usage & Cost Tracking
+# Tracks daily/monthly kWh from smart plug and converts to £ cost
+# Logs daily usage + cost to Google Sheets
+
+# -------------------------------
+# Utility Meters
+# -------------------------------
+utility_meter:
+  car_charger_daily_usage:
+    source: sensor.smart_plug_mini_energy_4
+    cycle: daily
+  car_charger_monthly_usage:
+    source: sensor.smart_plug_mini_energy_4
+    cycle: monthly
+
+
+# -------------------------------
+# Template Sensors (Cost)
+# -------------------------------
+template:
+  - sensor:
+      - name: "Car Charger Daily Cost"
+        unique_id: car_charger_daily_cost
+        unit_of_measurement: "£"
+        icon: mdi:currency-gbp
+        device_class: monetary
+        state_class: total
+        state: >
+          {% set kwh = states('sensor.car_charger_daily_usage') | float(0) %}
+          {% set price = states('input_number.electricity_unit_price') | float(0) %}
+          {{ (kwh * price) | round(2) }}
+
+      - name: "Car Charger Monthly Cost"
+        unique_id: car_charger_monthly_cost
+        unit_of_measurement: "£"
+        icon: mdi:currency-gbp
+        device_class: monetary
+        state_class: total
+        state: >
+          {% set kwh = states('sensor.car_charger_monthly_usage') | float(0) %}
+          {% set price = states('input_number.electricity_unit_price') | float(0) %}
+          {{ (kwh * price) | round(2) }}
+
+# -------------------------------
+# Rest Command (Google Sheets Logging)
+# -------------------------------
+rest_command:
+  log_car_charger_to_sheets:
+    url: !secret google_sheets_url
+    method: POST
+    headers:
+      Content-Type: application/json
+    payload: >
+      {
+        "date": "{{ now().strftime('%Y-%m-%d') }}",
+        "usage": "{{ states('sensor.car_charger_daily_usage') }}",
+        "cost": "{{ states('sensor.car_charger_daily_cost') }}"
+      }
+
+# -------------------------------
+# Automation (Daily Logging)
+# -------------------------------
+automation:
+  - alias: Log Car Charger Daily Usage
+    trigger:
+      - platform: time
+        at: "23:59:00"
+    action:
+      - service: rest_command.log_car_charger_to_sheets
