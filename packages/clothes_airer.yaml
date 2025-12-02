@@ -1,0 +1,77 @@
+# Clothes Airer Auto-Off Package
+# Automatically switches off after 16 hours, resets on manual toggle,
+# persists target off-time across restarts, and shows countdown.
+
+# -------------------------------
+# Helpers
+# -------------------------------
+input_datetime:
+  clothes_airer_off_time:
+    name: Clothes Airer Off Time
+    has_date: true
+    has_time: true
+
+# -------------------------------
+# Template Sensor (Countdown)
+# -------------------------------
+template:
+  - sensor:
+      - name: "Clothes Airer Time Left"
+        unique_id: clothes_airer_time_left
+        unit_of_measurement: "hours"
+        state: >
+          {% set off_time = states('input_datetime.clothes_airer_off_time') %}
+          {% if off_time not in ['unknown','unavailable',''] %}
+            {% set diff = (as_local(as_datetime(off_time)) - now()).total_seconds() %}
+            {% if diff > 0 %}
+              {{ (diff / 3600) | round(1) }}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+
+
+
+# -------------------------------
+# Automations
+# -------------------------------
+automation:
+  - alias: "Set Clothes Airer Off Time"
+    mode: restart
+    trigger:
+      - platform: state
+        entity_id: switch.smart_plug_clothes_airer
+        to: "on"
+    action:
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.clothes_airer_off_time
+        data:
+          datetime: "{{ (now() + timedelta(hours=16)).strftime('%Y-%m-%d %H:%M:%S') }}"
+
+  - alias: "Turn Off Clothes Airer at Target Time"
+    trigger:
+      - platform: time
+        at: input_datetime.clothes_airer_off_time
+    condition:
+      - condition: state
+        entity_id: switch.smart_plug_clothes_airer
+        state: "on"
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.smart_plug_clothes_airer
+
+  - alias: "Clear Clothes Airer Off Time When Off"
+    trigger:
+      - platform: state
+        entity_id: switch.smart_plug_clothes_airer
+        to: "off"
+    action:
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.clothes_airer_off_time
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
