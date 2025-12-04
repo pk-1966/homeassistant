@@ -1,7 +1,7 @@
-# packages/DVLA.yaml
+# packages/dvla.yaml
 #
 # DVLA MOT & Tax Expiry Sensors
-# Converted from legacy template sensors.yaml to modern syntax
+# Modern template syntax with entity_ids aligned to legacy automations
 
 homeassistant:
   customize: {}
@@ -9,7 +9,7 @@ homeassistant:
 template:
   - sensor:
       # MOT Expiry Sensors
-      - name: "BMW MOT Expiry (days)"
+      - name: "BMW MOT Expiry"
         unique_id: bmw_mot_expiry
         state: >-
           {% set expiry = as_datetime(states('sensor.dvla_pe69jnx_motexpirydate')) %}
@@ -27,7 +27,7 @@ template:
           {% endif %}
         unit_of_measurement: days
 
-      - name: "Kuga MOT Expiry (days)"
+      - name: "Kuga MOT Expiry"
         unique_id: kuga_mot_expiry
         state: >-
           {% set expiry = as_datetime(states('sensor.dvla_mk18dhd_motexpirydate')) %}
@@ -45,7 +45,7 @@ template:
           {% endif %}
         unit_of_measurement: days
 
-      - name: "Tipo MOT Expiry (days)"
+      - name: "Tipo MOT Expiry"
         unique_id: tipo_mot_expiry
         state: >-
           {% set expiry = as_datetime(states('sensor.dvla_wm17wlk_motexpirydate')) %}
@@ -63,7 +63,7 @@ template:
           {% endif %}
         unit_of_measurement: days
 
-      - name: "Fiesta MOT Expiry (days)"
+      - name: "Fiesta MOT Expiry"
         unique_id: fiesta_mot_expiry
         state: >-
           {% set expiry = as_datetime(states('sensor.dvla_kl10loz_motexpirydate')) %}
@@ -81,7 +81,7 @@ template:
           {% endif %}
         unit_of_measurement: days
 
-      - name: "Kuga Hybrid MOT Expiry (days)"
+      - name: "Kuga Hybrid MOT Expiry"
         unique_id: kuga2_mot_expiry
         state: >-
           {% set expiry = as_datetime(states('sensor.dvla_ng72omx_motexpirydate')) %}
@@ -100,7 +100,7 @@ template:
         unit_of_measurement: days
 
       # Tax Expiry Sensors
-      - name: "BMW Tax Expiry (days)"
+      - name: "BMW Tax Expiry"
         unique_id: bmw_tax_expiry
         state: >-
           {% set expiry = as_datetime(states('sensor.dvla_pe69jnx_taxduedate')) %}
@@ -118,7 +118,7 @@ template:
           {% endif %}
         unit_of_measurement: days
 
-      - name: "Kuga Tax Expiry (days)"
+      - name: "Kuga Tax Expiry"
         unique_id: kuga_tax_expiry
         state: >-
           {% set expiry = as_datetime(states('sensor.dvla_mk18dhd_taxduedate')) %}
@@ -136,7 +136,7 @@ template:
           {% endif %}
         unit_of_measurement: days
 
-      - name: "Tipo Tax Expiry (days)"
+      - name: "Tipo Tax Expiry"
         unique_id: tipo_tax_expiry
         state: >-
           {% set expiry = as_datetime(states('sensor.dvla_wm17wlk_taxduedate')) %}
@@ -154,7 +154,7 @@ template:
           {% endif %}
         unit_of_measurement: days
 
-      - name: "Fiesta Tax Expiry (days)"
+      - name: "Fiesta Tax Expiry"
         unique_id: fiesta_tax_expiry
         state: >-
           {% set expiry = as_datetime(states('sensor.dvla_kl10loz_taxduedate')) %}
@@ -172,7 +172,7 @@ template:
           {% endif %}
         unit_of_measurement: days
 
-      - name: "Kuga Hybrid Tax Expiry (days)"
+      - name: "Kuga Hybrid Tax Expiry"
         unique_id: kuga2_tax_expiry
         state: >-
           {% set expiry = as_datetime(states('sensor.dvla_ng72omx_taxduedate')) %}
@@ -189,327 +189,3 @@ template:
             mdi:exclamation-thick
           {% endif %}
         unit_of_measurement: days
-
-
-automation:
-
-  - alias: Notify when BMW 320d (PE69JNX) MOT expiry is less than 28 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.bmw_mot_expiry
-      below: 29
-    action:
-    - service: notify.hanotify
-      data:
-        message: The MOT on the BMW 320d (PE69JNX) expires on  {{ as_datetime((states('sensor.dvla_pe69jnx_motexpirydate'))).strftime('%d
-          %b, %Y')}}
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The MOT on your BMW 320d (PE69JNX) is expiring on {{as_datetime((states('sensor.dvla_pe69jnx_motexpirydate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: MOT Due soon - BMW 320d (PE69JNX)
-        target: paulkilshaw@gmail.com
-    id: 5b92b557b7bc4f6b98ada55d118caa55
-  - alias: Notify when BMW 320d (PE69JNX) MOT expiry is less than 7 days
-    trigger:
-    - platform: numeric_state
-      entity_id: sensor.bmw_mot_expiry
-      below: 8
-    action:
-    - service: notify.hanotify
-      data:
-        message: 'URGENT: The MOT on the BMW 320d (PE69JNX) expires on  {{ as_datetime((states(''sensor.dvla_pe69jnx_motexpirydate''))).strftime(''%d
-          %b, %Y'')}}'
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The MOT on your BMW 320d (PE69JNX) is expiring on {{as_datetime((states('sensor.dvla_pe69jnx_motexpirydate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: 'URGENT: MOT Due Next Week - BMW 320d (PE69JNX)'
-        target: paulkilshaw@gmail.com
-    id: 757f04dcdebe437696ec9dc8435330c9
-  - alias: Notify when BMW 320d (PE69JNX) Tax expiry is less than 28 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.bmw_tax_expiry
-      below: 29
-    action:
-    - service: notify.hanotify
-      data:
-        message: The Tax on the BMW 320d (PE69JNX) expires on  {{ as_datetime((states('sensor.dvla_pe69jnx_taxduedate'))).strftime('%d
-          %b, %Y')}}
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The Tax on your BMW 320d (PE69JNX) is expiring on {{as_datetime((states('sensor.dvla_pe69jnx_taxduedate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: Tax Due soon - BMW 320d (PE69JNX)
-        target: paulkilshaw@gmail.com
-    id: 0c8821ba3abe44c0ab029d50afd65b88
-  - alias: Notify when BMW 320d (PE69JNX) Tax expiry is less than 7 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.bmw_tax_expiry
-      below: 8
-    action:
-    - service: notify.hanotify
-      data:
-        message: 'URGENT: The Tax on the BMW 320d (PE69JNX) expires on  {{ as_datetime((states(''sensor.dvla_pe69jnx_taxduedate''))).strftime(''%d
-          %b, %Y'')}}'
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The Tax on your BMW 320d (PE69JNX) is expiring on {{as_datetime((states('sensor.dvla_pe69jnx_taxduedate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: 'URGENT: Tax Due Next Week - BMW 320d (PE69JNX)'
-        target: paulkilshaw@gmail.com
-    id: 61f09bda55d540e19262bacee7e36293
-  - alias: Notify when Ford Fiesta (KL10LOZ) MOT expiry is less than 28 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.fiesta_mot_expiry
-      below: 29
-    action:
-    - service: notify.hanotify
-      data:
-        message: The MOT on the Ford Fiesta (KL10LOZ) expires on  {{ as_datetime((states('sensor.dvla_kl10loz_motexpirydate'))).strftime('%d
-          %b, %Y')}}
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The MOT on your Ford Fiesta (KL10LOZ) is expiring on {{as_datetime((states('sensor.dvla_kl10loz_motexpirydate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: MOT Due soon - Ford Fiesta (KL10LOZ)
-        target: laurakilshaw2001@gmail.com
-    id: 80bb7ce374034955a133746e38b0d754
-  - alias: Notify when Ford Fiesta (KL10LOZ) MOT expiry is less than 7 days
-    trigger:
-    - platform: numeric_state
-      entity_id: sensor.fiesta_mot_expiry
-      below: 8
-    action:
-    - service: notify.hanotify
-      data:
-        message: 'URGENT: The MOT on the Ford Fiesta (KL10LOZ) expires on  {{ as_datetime((states(''sensor.dvla_kl10loz_motexpirydate''))).strftime(''%d
-          %b, %Y'')}}'
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The MOT on your Ford Fiesta (KL10LOZ) is expiring on {{as_datetime((states('sensor.dvla_kl10loz_motexpirydate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: 'URGENT: MOT Due Next Week - Ford Fiesta (KL10LOZ)'
-        target: laurakilshaw2001@gmail.com
-    id: 959a97ed945e4b71beeedea3d47e3a70
-  - alias: Notify when Ford Fiesta (KL10LOZ) Tax expiry is less than 28 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.fiesta_tax_expiry
-      below: 29
-    action:
-    - service: notify.hanotify
-      data:
-        message: The Tax on the Ford Fiesta (KL10LOZ) expires on  {{ as_datetime((states('sensor.dvla_kl10loz_taxduedate'))).strftime('%d
-          %b, %Y')}}
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The Tax on your Ford Fiesta (KL10LOZ) is expiring on {{as_datetime((states('sensor.dvla_kl10loz_taxduedate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: Tax Due soon - Ford Fiesta (KL10LOZ)
-        target: laurakilshaw2001@gmail.com
-    id: 2714b69d680d4ed38d079fbcfb6cf286
-  - alias: Notify when Ford Fiesta (KL10LOZ) Tax expiry is less than 7 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.fiesta_tax_expiry
-      below: 8
-    action:
-    - service: notify.hanotify
-      data:
-        message: 'URGENT: The Tax on the Ford Fiesta (KL10LOZ) expires on  {{ as_datetime((states(''sensor.dvla_kl10loz_taxduedate''))).strftime(''%d
-          %b, %Y'')}}'
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The Tax on your Ford Fiesta (KL10LOZ) is expiring on {{as_datetime((states('sensor.dvla_kl10loz_taxduedate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: 'URGENT: Tax Due Next Week - Ford Fiesta (KL10LOZ)'
-        target: laurakilshaw2001@gmail.com
-    id: 858531eae08144b3940d613e746a82e7
-  - alias: Notify when Fiat Tipo (WM17WLK) MOT expiry is less than 28 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.tipo_mot_expiry
-      below: 29
-    action:
-    - service: notify.hanotify
-      data:
-        message: The MOT on the Fiat Tipo (WM17WLK) expires on  {{ as_datetime((states('sensor.dvla_wm17wlk_motexpirydate'))).strftime('%d
-          %b, %Y')}}
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The MOT on your Fiat Tipo (WM17WLK) is expiring on {{as_datetime((states('sensor.dvla_wm17wlk_motexpirydate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: MOT Due soon - Fiat Tipo (WM17WLK)
-        target: kilshaw.alex@gmail.com
-    id: 7df5c1429b7f4a4788055d7cc4310fb8
-  - alias: Notify when Fiat Tipo (WM17WLK) MOT expiry is less than 7 days
-    trigger:
-    - platform: numeric_state
-      entity_id: sensor.tipo_mot_expiry
-      below: 8
-    action:
-    - service: notify.hanotify
-      data:
-        message: 'URGENT: The MOT on the Fiat Tipo (WM17WLK) expires on  {{ as_datetime((states(''sensor.dvla_wm17wlk_motexpirydate''))).strftime(''%d
-          %b, %Y'')}}'
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The MOT on your Fiat Tipo (WM17WLK) is expiring on {{as_datetime((states('sensor.dvla_wm17wlk_motexpirydate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: 'URGENT: MOT Due Next Week - Fiat Tipo (WM17WLK)'
-        target: kilshaw.alex@gmail.com
-    id: 53fd54c12fe84c4ab4aa6890f04866c7
-  - alias: Notify when Fiat Tipo (WM17WLK) Tax expiry is less than 28 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.tipo_tax_expiry
-      below: 29
-    action:
-    - service: notify.hanotify
-      data:
-        message: The Tax on the Fiat Tipo (WM17WLK) expires on  {{ as_datetime((states('sensor.dvla_wm17wlk_taxduedate'))).strftime('%d
-          %b, %Y')}}
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The Tax on your Fiat Tipo (WM17WLK) is expiring on {{as_datetime((states('sensor.dvla_wm17wlk_taxduedate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: Tax Due soon - Fiat Tipo (WM17WLK)
-        target: kilshaw.alex@gmail.com
-    id: 11ad1fe9805f47d6b7c07f598e41813c
-  - alias: Notify when Fiat Tipo (WM17WLK) Tax expiry is less than 7 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.tipo_tax_expiry
-      below: 8
-    action:
-    - service: notify.hanotify
-      data:
-        message: 'URGENT: The Tax on the Fiat Tipo (WM17WLK) expires on  {{ as_datetime((states(''sensor.dvla_wm17wlk_taxduedate''))).strftime(''%d
-          %b, %Y'')}}'
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The Tax on your Fiat Tipo (WM17WLK) is expiring on {{as_datetime((states('sensor.dvla_wm17wlk_taxduedate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: 'URGENT: Tax Due Next Week - Fiat Tipo (WM17WLK)'
-        target: kilshaw.alex@gmail.com
-    id: 8d6f1f3d2d5e4efda2e7a12680477650
-  - alias: Notify when Ford Kuga (MK18DHD) MOT expiry is less than 28 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.kuga_mot_expiry
-      below: 29
-    action:
-    - service: notify.hanotify
-      data:
-        message: The MOT on the Ford Kuga (MK18DHD) expires on  {{ as_datetime((states('sensor.dvla_mk18dhd_motexpirydate'))).strftime('%d
-          %b, %Y')}}
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The MOT on your Ford Kuga (MK18DHD) is expiring on {{as_datetime((states('sensor.dvla_mk18dhd_motexpirydate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: MOT Due soon - Ford Kuga (MK18DHD)
-        target: akilshaw@me.com
-    id: 6b5c667c69494e5283a5d3c527597481
-  - alias: Notify when Ford Kuga (MK18DHD) MOT expiry is less than 7 days
-    trigger:
-    - platform: numeric_state
-      entity_id: sensor.kuga_mot_expiry
-      below: 8
-    action:
-    - service: notify.hanotify
-      data:
-        message: 'URGENT: The MOT on the Ford Kuga (MK18DHD) expires on  {{ as_datetime((states(''sensor.dvla_mk18dhd_motexpirydate''))).strftime(''%d
-          %b, %Y'')}}'
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The MOT on your Ford Kuga (MK18DHD) is expiring on {{as_datetime((states('sensor.dvla_mk18dhd_motexpirydate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: 'URGENT: MOT Due Next Week - Ford Kuga (MK18DHD)'
-        target: akilshaw@me.com
-    id: 1da3ca84f0a04b7b9e53db77f06594b6
-  - alias: Notify when Ford Kuga (MK18DHD) Tax expiry is less than 28 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.kuga_tax_expiry
-      below: 29
-    action:
-    - service: notify.hanotify
-      data:
-        message: The Tax on the Ford Kuga (MK18DHD) expires on  {{ as_datetime((states('sensor.dvla_mk18dhd_taxduedate'))).strftime('%d
-          %b, %Y')}}
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The Tax on your Ford Kuga (MK18DHD) is expiring on {{as_datetime((states('sensor.dvla_mk18dhd_taxduedate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: Tax Due soon - Ford Kuga (MK18DHD)
-        target: akilshaw@me.com
-    id: 9205aa88037d495085d28da1f8b8c392
-  - alias: Notify when Ford Kuga (MK18DHD) Tax expiry is less than 7 days
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.kuga_tax_expiry
-      below: 8
-    action:
-    - service: notify.hanotify
-      data:
-        message: 'URGENT: The Tax on the Ford Kuga (MK18DHD) expires on  {{ as_datetime((states(''sensor.dvla_mk18dhd_taxduedate''))).strftime(''%d
-          %b, %Y'')}}'
-        target:
-        - '990577101168070706'
-    - service: notify.send_gmail
-      metadata: {}
-      data:
-        message: "The Tax on your Ford Kuga (MK18DHD) is expiring on {{as_datetime((states('sensor.dvla_mk18dhd_taxduedate'))).strftime('%d
-          %b, %Y')}}. \nThanks\nLove from your friendly home assistant :)\n"
-        title: 'URGENT: Tax Due Next Week - Ford Kuga (MK18DHD)'
-        target: akilshaw@me.com
-    id: 673f9d81478e4ff39ba0d7b7584c9768
